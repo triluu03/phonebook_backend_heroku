@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
@@ -33,25 +34,25 @@ let persons = [
     }
 ]
 
+const Person = require('./models/person')
+
+
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Person.find({}).then(person => {
+      response.json(person)
+    })
 })
 
 app.get('/info', (request, response) => {
-    const number = persons.length
-    const date = new Date()
-    response.send("<p>Phonebook has info for " + JSON.stringify(number) + " people </p> <p>" + date + "</p>")
+    Person.find({}).then(person => {
+      response.send("<p>Phonebook has info for " + JSON.stringify(person.length) + " people </p> <p>" + new Date() + "</p>")
+    })
 })
 
 app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = persons.find(p => p.id === id)
-
-  if (person) {
+  Person.findById(req.params.id).then(person => {
     res.json(person)
-  } else {
-    res.status(404).end()
-  }
+  })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
@@ -62,30 +63,20 @@ app.delete('/api/persons/:id', (req, res) => {
 })
 
 app.post('/api/persons', (request, response) => {
-  const person = request.body
-  const name = person.name
-  const duplicate = persons.find(person => person.name === name)
+  const body = request.body
 
-  if (!person.name) {
-    return response.status(400).json({
-      error: "person's name is missing"
-    })
-  }
-
-  if (duplicate) {
-    return response.status(400).json({
-      error: "name must be unique"
-    })
+  if (body.name === undefined) {
+    return response.status(400).json({error: 'name missing'})
   }
   
-  const newPerson = {
-    id: Math.floor(Math.random()*1000),
-    name: person.name,
-    number: person.number
-  }
-  persons = persons.concat(newPerson)
-
-  response.json(newPerson)
+  const person = new Person({
+    name: body.name,
+    number: body.number,
+  })
+  
+  person.save().then(savedPerson => {
+    response.json(savedPerson)
+  })
 })
 
 const PORT = process.env.PORT || 3001
